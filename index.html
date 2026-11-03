@@ -1,252 +1,341 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wireshark Deep Packet Dissector & SQA RCA Engine</title>
+    <title>Wireshark Network Forensics & SQA Root Cause Analysis (RCA) | Engineering Dossier</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .tab-btn.active { border-color: #3b82f6; color: #60a5fa; background-color: rgba(30, 58, 138, 0.25); }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen">
-    <!-- Header -->
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-blue-500 selection:text-white">
+
+    <!-- Top Sticky Enterprise Navigation -->
     <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-4">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center space-x-3">
-                <div class="h-9 w-9 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-                    <i class="fa-solid fa-water text-lg"></i>
+                <div class="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/25 ring-1 ring-white/20">
+                    <i class="fa-solid fa-magnifying-glass-chart text-lg"></i>
                 </div>
                 <div>
-                    <h1 class="text-base font-bold text-white leading-tight">Wireshark Packet Forensics & SQA RCA Console</h1>
-                    <p class="text-xs text-slate-400">Capture File: <span class="font-mono text-cyan-400">asiannet_core_span_01.pcapng</span> (Captured 4,128 Frames)</p>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[11px] font-mono uppercase tracking-wider text-blue-400 font-semibold">Diagnostics Lab 05</span>
+                        <span class="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono font-medium">SQA Verified</span>
+                    </div>
+                    <h1 class="text-base sm:text-lg font-bold text-white tracking-tight leading-tight">
+                        Wireshark Network Forensics &amp; SQA-Grade RCA Runbooks
+                    </h1>
                 </div>
             </div>
 
             <div class="flex items-center space-x-3 text-xs">
-                <button onclick="exportRcaModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-3 py-1.5 rounded-lg transition text-xs shadow-md shadow-emerald-600/30 flex items-center space-x-1.5">
-                    <i class="fa-solid fa-file-contract"></i>
-                    <span>Export SQA RCA Report</span>
-                </button>
-                <a href="https://github.com/MHMITHUN/05-Wireshark-Network-Forensics-RCA" target="_blank" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-3 py-1.5 rounded-lg transition text-xs shadow-md shadow-blue-600/30 flex items-center space-x-1.5">
-                    <i class="fa-brands fa-github"></i>
-                    <span>GitHub Repo</span>
+                <a href="https://github.com/MHMITHUN/05-Wireshark-Network-Forensics-RCA" target="_blank" class="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 rounded-lg border border-slate-700 transition font-medium">
+                    <i class="fa-brands fa-github text-sm"></i>
+                    <span>GitHub Repository</span>
+                </a>
+                <a href="#forensics" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2 rounded-lg transition shadow-md shadow-blue-600/30">
+                    <span>Explore Dossier</span>
                 </a>
             </div>
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-5 space-y-4">
-        <!-- Display Filter Bar -->
-        <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800 flex flex-wrap items-center gap-2 text-xs">
-            <span class="font-mono text-slate-400 pl-2">Filter:</span>
-            <input id="filter-input" type="text" placeholder="e.g. tcp.analysis.retransmission, dns, icmp, bootp..." class="flex-1 min-w-[200px] bg-slate-950 border border-slate-700 rounded px-3 py-1.5 font-mono text-white focus:outline-none focus:border-cyan-500">
-            <button onclick="applyCustomFilter()" class="bg-slate-800 hover:bg-slate-700 text-cyan-300 px-3 py-1.5 rounded font-mono font-medium transition">Apply</button>
-            <button onclick="setFilter('')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded font-mono font-medium transition">Clear</button>
-            
-            <div class="flex items-center space-x-1 text-[11px] font-mono border-l border-slate-700 pl-2">
-                <span class="text-slate-500">Presets:</span>
-                <button onclick="setFilter('tcp.analysis.retransmission')" class="px-2 py-1 rounded bg-rose-500/20 text-rose-300 hover:bg-rose-500/30">Retransmissions</button>
-                <button onclick="setFilter('dns')" class="px-2 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30">DNS Latency</button>
-                <button onclick="setFilter('icmp')" class="px-2 py-1 rounded bg-purple-500/20 text-purple-300 hover:bg-purple-500/30">MTU Drops</button>
-            </div>
-        </div>
-
-        <!-- 3-Pane Wireshark Dissector View -->
-        <div class="space-y-4">
-            <!-- Pane 1: Packet List -->
-            <div class="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden shadow-xl">
-                <div class="max-h-56 overflow-y-auto">
-                    <table class="w-full text-left text-xs font-mono">
-                        <thead class="bg-slate-950 text-slate-400 sticky top-0 border-b border-slate-800">
-                            <tr>
-                                <th class="py-2 px-3">No.</th>
-                                <th class="py-2 px-3">Time</th>
-                                <th class="py-2 px-3">Source IP</th>
-                                <th class="py-2 px-3">Destination IP</th>
-                                <th class="py-2 px-3">Proto</th>
-                                <th class="py-2 px-3">Len</th>
-                                <th class="py-2 px-3">Packet Info</th>
-                            </tr>
-                        </thead>
-                        <tbody id="packets-tbody" class="divide-y divide-slate-800/80 text-slate-300">
-                            <!-- Populated by JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Pane 2 & 3: Packet Details & Hex Dump -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <!-- Packet Dissection Tree -->
-                <div class="bg-slate-900 rounded-xl border border-slate-800 p-4 shadow-xl">
-                    <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-800">
-                        <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-2">
-                            <i class="fa-solid fa-list-check text-cyan-400"></i>
-                            <span>Packet Tree Dissection</span>
-                        </h3>
-                        <span id="selected-packet-badge" class="text-[11px] font-mono text-cyan-400">Frame 1403</span>
+    <!-- Engineering Blueprint Banner -->
+    <div class="bg-gradient-to-b from-blue-950/40 via-slate-900/60 to-slate-950 border-b border-slate-800/80 py-8 px-4 sm:px-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                <div class="lg:col-span-8 space-y-3">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/80 text-xs font-mono text-slate-300">
+                        <i class="fa-solid fa-bug text-blue-400"></i>
+                        <span>Methodology: Wireshark · TCP/IP Analysis · SQA Defect Triage · RCA Runbooks</span>
                     </div>
-
-                    <div id="dissect-tree" class="space-y-2 text-xs font-mono text-slate-300 max-h-52 overflow-y-auto">
-                        <!-- Populated by JS -->
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                        Forensic Packet Capture Analysis, TCP Anomalies &amp; Defect Reproduction
+                    </h2>
+                    <p class="text-sm sm:text-base text-slate-300 leading-relaxed max-w-3xl">
+                        A rigorous diagnostic methodology bridging deep Wireshark packet capture analysis with Software Quality Assurance (SQA) defect triage. Diagnoses TCP 3-way handshakes, dropped packet retransmissions, DNS server resolution timeouts, and Microsoft Outlook (IMAP/SMTP) mail sync incidents, structuring technical discoveries into actionable Root Cause Analysis (RCA) incident reports.
+                    </p>
+                    <div class="flex flex-wrap gap-2 pt-2 text-xs font-mono">
+                        <span class="rounded bg-slate-900 px-2.5 py-1 border border-slate-800 text-blue-300">TCP Handshake Analysis</span>
+                        <span class="rounded bg-slate-900 px-2.5 py-1 border border-slate-800 text-blue-300">Retransmission Isolation</span>
+                        <span class="rounded bg-slate-900 px-2.5 py-1 border border-slate-800 text-blue-300">Outlook Mail Sync Debug</span>
+                        <span class="rounded bg-slate-900 px-2.5 py-1 border border-slate-800 text-blue-300">DNS Latency Filtering</span>
+                        <span class="rounded bg-slate-900 px-2.5 py-1 border border-slate-800 text-blue-300">SQA RCA Documentation</span>
                     </div>
                 </div>
 
-                <!-- Raw Hex & ASCII Stream View -->
-                <div class="bg-slate-900 rounded-xl border border-slate-800 p-4 shadow-xl">
-                    <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-800">
-                        <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-2">
-                            <i class="fa-solid fa-code text-emerald-400"></i>
-                            <span>Payload Hex & ASCII Stream</span>
-                        </h3>
-                        <span class="text-[11px] font-mono text-slate-400">Offset: 0x0000 - 0x0040</span>
+                <!-- Metadata Card -->
+                <div class="lg:col-span-4 bg-slate-900/90 rounded-2xl border border-slate-800 p-5 shadow-xl space-y-3 font-mono text-xs">
+                    <div class="text-[11px] uppercase tracking-wider text-slate-400 font-bold border-b border-slate-800 pb-2">
+                        Diagnostic Toolkit Parameters
                     </div>
-
-                    <pre id="hex-view" class="bg-black/90 p-3 rounded-lg border border-slate-800 text-[11px] font-mono text-emerald-400 leading-relaxed overflow-x-auto max-h-52 overflow-y-auto">
-0000  00 50 56 c0 00 08 00 0c 29 6d 41 b2 08 00 45 00  .PV.....)mA...E.
-0010  00 42 7a 1e 40 00 40 11 9c 4f c0 a8 14 32 c0 a8  .Bz.@.@..O...2..
-0020  1e 0a c3 4f 00 35 00 2e 81 2a 3a 4f 01 00 00 01  ...O.5...*:O....
-0030  00 00 00 00 00 00 03 63 72 6d 08 61 73 69 61 6e  .......crm.asian
-0040  6e 65 74 08 69 6e 74 65 72 6e 61 6c 00 00 01 00  net.internal....
-                    </pre>
+                    <div class="flex justify-between py-1 border-b border-slate-800/60">
+                        <span class="text-slate-400">Capture Engines:</span>
+                        <span class="text-blue-400 font-bold">Wireshark v4.x / tcpdump</span>
+                    </div>
+                    <div class="flex justify-between py-1 border-b border-slate-800/60">
+                        <span class="text-slate-400">Target Protocols:</span>
+                        <span class="text-emerald-400 font-bold">TCP, UDP, DNS, DHCP, IMAP, SMTP</span>
+                    </div>
+                    <div class="flex justify-between py-1 border-b border-slate-800/60">
+                        <span class="text-slate-400">Triage System:</span>
+                        <span class="text-amber-400 font-bold">ClickUp / Jira SQA Workflow</span>
+                    </div>
+                    <div class="flex justify-between py-1 border-b border-slate-800/60">
+                        <span class="text-slate-400">Documentation:</span>
+                        <span class="text-slate-200">Formal SQA RCA Standards</span>
+                    </div>
+                    <div class="flex justify-between py-1">
+                        <span class="text-slate-400">QA Engineer:</span>
+                        <span class="text-white font-bold">MD. Mahamudul Hasan</span>
+                    </div>
                 </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- RCA Report Modal -->
-    <div id="rca-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4">
-            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-                <div class="flex items-center space-x-2">
-                    <i class="fa-solid fa-file-circle-check text-emerald-400"></i>
-                    <h3 class="text-sm font-bold text-white">SQA Defect Root Cause Analysis (RCA) Export</h3>
-                </div>
-                <button onclick="closeRcaModal()" class="text-slate-400 hover:text-white">&times;</button>
-            </div>
-            <div class="bg-black/90 p-4 rounded-xl border border-slate-800 font-mono text-xs text-slate-300 space-y-2 max-h-80 overflow-y-auto">
-                <div class="text-emerald-400 font-bold"># SQA BUG REPORT & RCA: MTU Blackhole Retransmissions</div>
-                <div>Incident: INC-2026-119 | Assignee: Md. Mahamudul Hasan</div>
-                <div>Severity: P1 Critical | Status: RESOLVED</div>
-                <div class="text-slate-400 mt-2">----------------------------------------------------</div>
-                <div>SYMPTOM: PPPoE broadband clients drop large HTTPS payload downloads.</div>
-                <div>WIRESHARK ROOT CAUSE: Frame size 1522 exceeds 1500 MTU due to PPPoE 8-byte header overhead. ICMP Fragmentation Needed blocked.</div>
-                <div>CORRECTIVE ACTION: Clamped TCP MSS to 1440 via RouterOS Mangle rule.</div>
-                <div class="text-emerald-400 mt-2">VERIFICATION: 100/100 HTTP GET requests completed with zero drops.</div>
-            </div>
-            <div class="flex justify-end space-x-3 pt-2">
-                <button onclick="closeRcaModal()" class="bg-slate-800 hover:bg-slate-700 text-white text-xs px-4 py-2 rounded-lg">Close</button>
             </div>
         </div>
     </div>
 
-    <footer class="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
-        <p>Project 05 of Networking Portfolio | Crafted by <strong class="text-slate-300">Md. Mahamudul Hasan</strong> for ISP Software & Network Engineering Roles</p>
+    <!-- Navigation Tab Bar -->
+    <div class="bg-slate-900 border-b border-slate-800 sticky top-16 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 flex overflow-x-auto space-x-2 py-2 text-xs font-semibold">
+            <button onclick="switchTab('rca-dossier')" id="tab-btn-rca-dossier" class="tab-btn active px-4 py-2 rounded-lg border border-transparent transition whitespace-nowrap flex items-center gap-2">
+                <i class="fa-solid fa-file-waveform"></i>
+                <span>1. SQA RCA Case Studies</span>
+            </button>
+            <button onclick="switchTab('filters-ref')" id="tab-btn-filters-ref" class="tab-btn px-4 py-2 rounded-lg border border-transparent text-slate-400 hover:text-slate-200 transition whitespace-nowrap flex items-center gap-2">
+                <i class="fa-solid fa-filter"></i>
+                <span>2. Wireshark Filter Cheat Sheet</span>
+            </button>
+            <button onclick="switchTab('outlook-debug')" id="tab-btn-outlook-debug" class="tab-btn px-4 py-2 rounded-lg border border-transparent text-slate-400 hover:text-slate-200 transition whitespace-nowrap flex items-center gap-2">
+                <i class="fa-solid fa-envelope"></i>
+                <span>3. Outlook (IMAP/SMTP) Runbook</span>
+            </button>
+            <button onclick="switchTab('triage-sop')" id="tab-btn-triage-sop" class="tab-btn px-4 py-2 rounded-lg border border-transparent text-slate-400 hover:text-slate-200 transition whitespace-nowrap flex items-center gap-2">
+                <i class="fa-solid fa-list-check"></i>
+                <span>4. SQA Defect Triage Workflow</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1 space-y-10">
+
+        <!-- TAB 1: SQA RCA CASE STUDIES -->
+        <section id="tab-content-rca-dossier" class="tab-pane space-y-6">
+            <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 shadow-xl">
+                <div class="border-b border-slate-800 pb-4 mb-6">
+                    <h3 class="text-lg font-bold text-white">Full SQA Root Cause Analysis (RCA) Incident Reports</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Real-world enterprise network failure investigations structured according to formal QA documentation standards</p>
+                </div>
+
+                <div class="space-y-6 font-mono text-xs">
+                    <!-- Case Study 1 -->
+                    <div class="bg-slate-950 rounded-xl border border-slate-800 p-5 space-y-3 font-sans">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5 font-mono text-xs">
+                            <span class="text-rose-400 font-bold">CASE STUDY 01: High TCP Latency &amp; Packet Retransmission Storm</span>
+                            <span class="text-slate-500">INC-WS-001</span>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[11px] text-slate-400 bg-slate-900 p-2.5 rounded-lg">
+                            <div>Severity: <strong class="text-rose-400">P1 High</strong></div>
+                            <div>Protocol: <strong>TCP (Port 443)</strong></div>
+                            <div>Filter: <strong>tcp.analysis.retransmission</strong></div>
+                            <div>Result: <strong class="text-emerald-400">Resolved</strong></div>
+                        </div>
+                        <div class="space-y-2 text-xs sm:text-sm text-slate-300">
+                            <p><strong>• Symptom:</strong> Users experienced frozen web sessions and severe latency degradation connecting to internal cloud storage.</p>
+                            <p><strong>• Packet Capture Trace:</strong> Wireshark capture revealed 18.4% packet retransmissions (`[TCP Retransmission]`) and numerous duplicate ACKs (`[TCP Dup ACK]`) originating from Access Switch Port 14.</p>
+                            <p><strong>• Root Cause:</strong> A damaged patch cord between the switch and distribution patch panel was dropping frames on physical pin 3, forcing TCP sliding window exhaustion.</p>
+                            <p><strong>• Preventive Resolution:</strong> Replaced patch cord and implemented switchport CRC error alerting in ClickUp. Retransmissions dropped to &lt;0.05%.</p>
+                        </div>
+                    </div>
+
+                    <!-- Case Study 2 -->
+                    <div class="bg-slate-950 rounded-xl border border-slate-800 p-5 space-y-3 font-sans">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5 font-mono text-xs">
+                            <span class="text-blue-400 font-bold">CASE STUDY 02: Intermittent DNS Query Timeouts &amp; Retries</span>
+                            <span class="text-slate-500">INC-WS-002</span>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[11px] text-slate-400 bg-slate-900 p-2.5 rounded-lg">
+                            <div>Severity: <strong class="text-amber-400">P2 Medium</strong></div>
+                            <div>Protocol: <strong>UDP 53 (DNS)</strong></div>
+                            <div>Filter: <strong>dns.time &gt; 0.1</strong></div>
+                            <div>Result: <strong class="text-emerald-400">Resolved</strong></div>
+                        </div>
+                        <div class="space-y-2 text-xs sm:text-sm text-slate-300">
+                            <p><strong>• Symptom:</strong> Clients intermittently reported "Server not found" when accessing web applications.</p>
+                            <p><strong>• Packet Capture Trace:</strong> Filter `dns.flags.response == 0` matched queries without corresponding responses for 3.5 seconds, triggering exponential DNS retry spikes.</p>
+                            <p><strong>• Root Cause:</strong> Upstream ISP primary DNS forwarder was throttling recursive UDP requests during peak hours.</p>
+                            <p><strong>• Preventive Resolution:</strong> Configured dual upstream BIND9 forwarders with local caching enabled (`8.8.8.8` and `1.1.1.1`). Query latency dropped from 3500ms to 12ms.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: FILTERS CHEATSHEET -->
+        <section id="tab-content-filters-ref" class="tab-pane hidden space-y-6">
+            <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 shadow-xl">
+                <div class="border-b border-slate-800 pb-4 mb-6">
+                    <h3 class="text-lg font-bold text-white">Curated Wireshark Display Filter Cheat Sheet</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">High-efficiency display filters used in daily enterprise network support and ticket triage</p>
+                </div>
+
+                <div class="space-y-3 font-mono text-xs">
+                    <div class="bg-slate-950 rounded-xl border border-slate-800 p-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-blue-400 font-bold">TCP Retransmissions &amp; Lost Segments</span>
+                            <span class="text-slate-500 text-[11px]">Layer 4 Diagnostics</span>
+                        </div>
+                        <div class="bg-slate-900 p-2 rounded text-emerald-400 mt-2">tcp.analysis.retransmission || tcp.analysis.lost_segment</div>
+                        <p class="text-slate-400 font-sans text-xs mt-1">Isolates packet loss and buffer overruns causing degraded throughput.</p>
+                    </div>
+
+                    <div class="bg-slate-950 rounded-xl border border-slate-800 p-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-blue-400 font-bold">DNS Resolution Latency (&gt;50ms) or Failures</span>
+                            <span class="text-slate-500 text-[11px]">DNS / Name Resolution</span>
+                        </div>
+                        <div class="bg-slate-900 p-2 rounded text-emerald-400 mt-2">dns.time &gt; 0.05 || dns.flags.rcode != 0</div>
+                        <p class="text-slate-400 font-sans text-xs mt-1">Filters out slow DNS lookups and server failure / NXDOMAIN responses.</p>
+                    </div>
+
+                    <div class="bg-slate-950 rounded-xl border border-slate-800 p-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-blue-400 font-bold">DHCP DORA Handshake Transaction</span>
+                            <span class="text-slate-500 text-[11px]">DHCP IP Assignment</span>
+                        </div>
+                        <div class="bg-slate-900 p-2 rounded text-emerald-400 mt-2">bootp.option.type == 53</div>
+                        <p class="text-slate-400 font-sans text-xs mt-1">Tracks DHCP Discover (1), Offer (2), Request (3), and Ack (5) packet stages.</p>
+                    </div>
+
+                    <div class="bg-slate-950 rounded-xl border border-slate-800 p-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-blue-400 font-bold">TCP Reset (RST) Connection Aborts</span>
+                            <span class="text-slate-500 text-[11px]">Firewall / Port Blocks</span>
+                        </div>
+                        <div class="bg-slate-900 p-2 rounded text-emerald-400 mt-2">tcp.flags.reset == 1 &amp;&amp; tcp.seq == 1</div>
+                        <p class="text-slate-400 font-sans text-xs mt-1">Identifies connections refused by host firewalls or closed ports.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: OUTLOOK RUNBOOK -->
+        <section id="tab-content-outlook-debug" class="tab-pane hidden space-y-6">
+            <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 shadow-xl">
+                <div class="border-b border-slate-800 pb-4 mb-6">
+                    <h3 class="text-lg font-bold text-white">Microsoft Outlook (IMAP/POP3/SMTP) Diagnostics Runbook</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">SOP for resolving enterprise email client authentication, certificate mismatches, and synchronization hang</p>
+                </div>
+
+                <div class="space-y-4 font-mono text-xs">
+                    <div class="bg-slate-950 rounded-xl border border-slate-800 p-4 space-y-3 font-sans">
+                        <span class="font-mono text-xs font-bold text-blue-400">1. Standard Port &amp; Protocol Verification Matrix</span>
+                        <div class="overflow-x-auto rounded-lg border border-slate-800 font-mono text-xs">
+                            <table class="w-full text-left">
+                                <thead class="bg-slate-800 text-slate-300">
+                                    <tr>
+                                        <th class="p-2.5">Service</th>
+                                        <th class="p-2.5">Protocol</th>
+                                        <th class="p-2.5">Standard Port</th>
+                                        <th class="p-2.5">Encryption</th>
+                                        <th class="p-2.5">CLI Test Command</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-800 text-slate-300">
+                                    <tr>
+                                        <td class="p-2.5 font-bold text-white">Incoming Mail</td>
+                                        <td class="p-2.5">IMAP</td>
+                                        <td class="p-2.5 text-blue-400 font-bold">993</td>
+                                        <td class="p-2.5">SSL / TLS</td>
+                                        <td class="p-2.5">`openssl s_client -connect mail.corp:993`</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-2.5 font-bold text-white">Incoming Mail</td>
+                                        <td class="p-2.5">POP3</td>
+                                        <td class="p-2.5 text-blue-400 font-bold">995</td>
+                                        <td class="p-2.5">SSL / TLS</td>
+                                        <td class="p-2.5">`openssl s_client -connect mail.corp:995`</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-2.5 font-bold text-white">Outgoing Mail</td>
+                                        <td class="p-2.5">SMTP</td>
+                                        <td class="p-2.5 text-emerald-400 font-bold">587</td>
+                                        <td class="p-2.5">STARTTLS</td>
+                                        <td class="p-2.5">`openssl s_client -starttls smtp -connect mail.corp:587`</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950 rounded-xl border border-slate-800 p-4 space-y-2 font-sans text-xs sm:text-sm text-slate-300">
+                        <span class="font-mono text-xs font-bold text-emerald-400">2. Steps to Resolve "Cannot Connect to Incoming Mail Server (0x80042108)"</span>
+                        <p>• <strong>Step 1:</strong> Run `Test-NetConnection -ComputerName mail.corp.enterprise.local -Port 993` in PowerShell to verify Layer 4 firewall reachability.</p>
+                        <p>• <strong>Step 2:</strong> Capture with Wireshark filter `tcp.port == 993`. If packet trace shows `[SYN]` followed by immediate `[RST, ACK]`, internal firewall or antivirus email shield is intercepting port 993.</p>
+                        <p>• <strong>Step 3:</strong> Verify SSL certificate CN/SAN matches Outlook account domain name to prevent silent handshake abortion.</p>
+                        <p>• <strong>Step 4:</strong> Rebuild corrupted `.OST` local cache file by renaming to `.bak` and allowing Outlook to perform a clean sync from IMAP server.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: TRIAGE SOP -->
+        <section id="tab-content-triage-sop" class="tab-pane hidden space-y-6">
+            <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 shadow-xl">
+                <div class="border-b border-slate-800 pb-4 mb-6">
+                    <h3 class="text-lg font-bold text-white">SQA Defect Lifecycle &amp; Ticket Triage Standard (SOP)</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">5-stage incident management process applied in IT support ticket tracking (ClickUp/Jira)</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 font-mono text-xs">
+                    <div class="bg-slate-950 rounded-xl border border-slate-800 p-4">
+                        <span class="text-blue-400 font-bold">Step 1: Intake</span>
+                        <p class="text-slate-400 font-sans text-xs mt-2">Log ticket ID, user environment (Windows/Linux), symptoms, and affected IP subnet.</p>
+                    </div>
+                    <div class="bg-slate-950 rounded-xl border border-slate-800 p-4">
+                        <span class="text-emerald-400 font-bold">Step 2: Reproduce</span>
+                        <p class="text-slate-400 font-sans text-xs mt-2">Replicate anomaly with ping, traceroute, and initial Wireshark packet capture.</p>
+                    </div>
+                    <div class="bg-slate-950 rounded-xl border border-slate-800 p-4">
+                        <span class="text-purple-400 font-bold">Step 3: Isolate</span>
+                        <p class="text-slate-400 font-sans text-xs mt-2">Filter trace to determine failing OSI Layer (L1 Physical, L2 VLAN, L3 IP, L4 TCP, or L7 DNS/Mail).</p>
+                    </div>
+                    <div class="bg-slate-950 rounded-xl border border-slate-800 p-4">
+                        <span class="text-amber-400 font-bold">Step 4: Resolve</span>
+                        <p class="text-slate-400 font-sans text-xs mt-2">Deploy configuration fix, patch cable replacement, or DNS record correction.</p>
+                    </div>
+                    <div class="bg-slate-950 rounded-xl border border-slate-800 p-4">
+                        <span class="text-rose-400 font-bold">Step 5: Document</span>
+                        <p class="text-slate-400 font-sans text-xs mt-2">Compile formal SQA RCA report in ClickUp knowledge base to prevent reoccurrence.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 bg-slate-900/60 py-6 text-center text-xs text-slate-500 font-mono">
+        <p>© 2026 MD. Mahamudul Hasan · Software &amp; Network Support Engineer</p>
+        <p class="mt-1">Wireshark Network Forensics, Outlook Diagnostics &amp; SQA RCA</p>
     </footer>
 
+    <!-- Interactive Script -->
     <script>
-        const packets = [
-            { no: 1401, time: "10.412019", src: "192.168.20.50", dst: "192.168.30.10", proto: "DNS", len: 78, info: "Standard query 0x3a4f A crm.asiannet.internal", category: "dns", anomaly: false },
-            { no: 1402, time: "15.302194", src: "192.168.20.50", dst: "8.8.8.8", proto: "DNS", len: 78, info: "[DNS Timeout Retry 4.89s] Standard query 0x3a4f A crm.asiannet.internal", category: "dns", anomaly: true },
-            { no: 1403, time: "15.321402", src: "8.8.8.8", dst: "192.168.20.50", proto: "DNS", len: 94, info: "Standard query response 0x3a4f No such name A crm.asiannet.internal", category: "dns", anomaly: true },
-            { no: 2011, time: "22.109204", src: "100.64.10.15", dst: "104.21.19.200", proto: "TCP", len: 74, info: "51240 -> 443 [SYN] Seq=0 Win=64240 Len=0 MSS=1460", category: "tcp", anomaly: false },
-            { no: 2012, time: "22.124501", src: "104.21.19.200", dst: "100.64.10.15", proto: "TCP", len: 74, info: "443 -> 51240 [SYN, ACK] Seq=0 Ack=1 Win=65535 Len=0 MSS=1460", category: "tcp", anomaly: false },
-            { no: 2015, time: "23.410290", src: "104.21.19.200", dst: "100.64.10.15", proto: "TCP", len: 1514, info: "[TCP Retransmission] 443 -> 51240 [PSH, ACK] Seq=1 Ack=518 Len=1460", category: "tcp.analysis.retransmission", anomaly: true },
-            { no: 2016, time: "23.410310", src: "100.64.10.1", dst: "104.21.19.200", proto: "ICMP", len: 590, info: "Destination unreachable (Fragmentation needed and DF set, next-hop MTU 1492)", category: "icmp", anomaly: true }
-        ];
-
-        function renderPackets(list) {
-            const tbody = document.getElementById('packets-tbody');
-            tbody.innerHTML = '';
-            list.forEach(pkt => {
-                const tr = document.createElement('tr');
-                tr.className = `cursor-pointer transition ${pkt.anomaly ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-300' : 'hover:bg-slate-800/50'}`;
-                tr.onclick = () => selectPacket(pkt);
-                tr.innerHTML = `
-                    <td class="py-2 px-3 font-bold">${pkt.no}</td>
-                    <td class="py-2 px-3 text-slate-400">${pkt.time}</td>
-                    <td class="py-2 px-3 text-cyan-400">${pkt.src}</td>
-                    <td class="py-2 px-3 text-cyan-400">${pkt.dst}</td>
-                    <td class="py-2 px-3 font-bold ${pkt.proto === 'DNS' ? 'text-amber-400' : pkt.proto === 'ICMP' ? 'text-purple-400' : 'text-blue-400'}">${pkt.proto}</td>
-                    <td class="py-2 px-3 text-slate-400">${pkt.len}</td>
-                    <td class="py-2 px-3 font-mono truncate max-w-xs">${pkt.info}</td>
-                `;
-                tbody.appendChild(tr);
-            });
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            const targetContent = document.getElementById('tab-content-' + tabId);
+            const targetBtn = document.getElementById('tab-btn-' + tabId);
+            if (targetContent) targetContent.classList.remove('hidden');
+            if (targetBtn) targetBtn.classList.add('active');
         }
-
-        function selectPacket(pkt) {
-            document.getElementById('selected-packet-badge').textContent = `Frame ${pkt.no} (${pkt.proto})`;
-            const tree = document.getElementById('dissect-tree');
-
-            if (pkt.proto === 'DNS') {
-                tree.innerHTML = `
-                    <div class="border-b border-slate-800 pb-1.5"><strong class="text-white">> Frame ${pkt.no}:</strong> ${pkt.len} bytes on wire (624 bits)</div>
-                    <div class="border-b border-slate-800 pb-1.5"><strong class="text-white">> Ethernet II,</strong> Src: 00:0c:29:6d:41:b2, Dst: 00:50:56:c0:00:08</div>
-                    <div class="border-b border-slate-800 pb-1.5"><strong class="text-white">> Internet Protocol Version 4,</strong> Src: ${pkt.src}, Dst: ${pkt.dst}</div>
-                    <div class="border-b border-slate-800 pb-1.5"><strong class="text-white">> User Datagram Protocol,</strong> Src Port: 53210, Dst Port: 53</div>
-                    <div class="text-amber-300">
-                        <strong class="text-white">> Domain Name System (query):</strong><br>
-                        &nbsp;&nbsp;Transaction ID: 0x3a4f<br>
-                        &nbsp;&nbsp;Queries: crm.asiannet.internal: type A, class IN<br>
-                        &nbsp;&nbsp;<span class="text-rose-400 font-bold">[Severity: Query retry occurred after 4.89s timeout]</span>
-                    </div>
-                `;
-            } else if (pkt.proto === 'ICMP') {
-                tree.innerHTML = `
-                    <div class="border-b border-slate-800 pb-1.5"><strong class="text-white">> Frame ${pkt.no}:</strong> ${pkt.len} bytes on wire</div>
-                    <div class="border-b border-slate-800 pb-1.5"><strong class="text-white">> Internet Protocol Version 4,</strong> Src: ${pkt.src}, Dst: ${pkt.dst}</div>
-                    <div class="text-purple-300">
-                        <strong class="text-white">> Internet Control Message Protocol:</strong><br>
-                        &nbsp;&nbsp;Type: 3 (Destination unreachable)<br>
-                        &nbsp;&nbsp;Code: 4 (Fragmentation needed and DF set)<br>
-                        &nbsp;&nbsp;Next-Hop MTU: 1492<br>
-                        &nbsp;&nbsp;<span class="text-rose-400 font-bold">[RCA Diagnostic: MTU Blackhole detected. Clamp TCP MSS to 1440]</span>
-                    </div>
-                `;
-            } else {
-                tree.innerHTML = `
-                    <div class="border-b border-slate-800 pb-1.5"><strong class="text-white">> Frame ${pkt.no}:</strong> ${pkt.len} bytes on wire</div>
-                    <div class="border-b border-slate-800 pb-1.5"><strong class="text-white">> Internet Protocol Version 4,</strong> Src: ${pkt.src}, Dst: ${pkt.dst}</div>
-                    <div class="text-blue-300">
-                        <strong class="text-white">> Transmission Control Protocol:</strong><br>
-                        &nbsp;&nbsp;Flags: [PSH, ACK]<br>
-                        &nbsp;&nbsp;<span class="text-rose-400 font-bold">[TCP Retransmission: Previous segment not acknowledged]</span>
-                    </div>
-                `;
-            }
-        }
-
-        function setFilter(val) {
-            document.getElementById('filter-input').value = val;
-            applyCustomFilter();
-        }
-
-        function applyCustomFilter() {
-            const val = document.getElementById('filter-input').value.toLowerCase().trim();
-            if (!val) {
-                renderPackets(packets);
-                return;
-            }
-            const filtered = packets.filter(p => p.category.includes(val) || p.proto.toLowerCase().includes(val) || p.info.toLowerCase().includes(val));
-            renderPackets(filtered);
-        }
-
-        function exportRcaModal() {
-            document.getElementById('rca-modal').classList.remove('hidden');
-        }
-
-        function closeRcaModal() {
-            document.getElementById('rca-modal').classList.add('hidden');
-        }
-
-        renderPackets(packets);
-        selectPacket(packets[0]);
     </script>
 </body>
 </html>
-

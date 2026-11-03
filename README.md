@@ -1,58 +1,39 @@
-# Wireshark Deep Packet Forensics & SQA-Driven Root Cause Analysis (RCA) Runbook
+# Wireshark Network Forensics & SQA-Driven Root Cause Analysis (RCA) Runbook
 
-[![Live Demo](https://img.shields.io/badge/Demo-Interactive%20Wireshark%20Packet%20Dissector-06b6d4)](https://mhmithun.github.io/05-Wireshark-Network-Forensics-RCA/)
+[![Live Demo](https://img.shields.io/badge/Demo-Live%20Forensics%20Dossier-06b6d4)](https://mhmithun.github.io/05-Wireshark-Network-Forensics-RCA/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
-[![Analysis: Wireshark](https://img.shields.io/badge/Sniffer-Wireshark%20%2F%20tshark-blue.svg)](docs/wireshark_display_filters_cheat_sheet.md)
-[![Methodology: SQA RCA](https://img.shields.io/badge/Standard-IEEE%20829%20%2F%20ITIL%20RCA-emerald.svg)](docs/RCA_01_DNS_Resolution_Latency.md)
+[![Tool: Wireshark / SQA](https://img.shields.io/badge/Forensics-Wireshark%20%7C%20SQA%20RCA-blue.svg)](#)
 
-Production troubleshooting framework bridging **Wireshark packet capture telemetry** with rigorous **Software Quality Assurance (SQA)** defect triage and **ITIL Root Cause Analysis (RCA)**. Solves ISP and enterprise latency, TCP retransmission storms, MTU blackholes, and rogue broadcast loops.
-
----
-
-## 🌐 Live Web Packet Dissector (`index.html`)
-
-An interactive browser-based Wireshark simulator:
-- **Interactive Packet Table**: Browse real packet streams (Frame Number, Timestamp, Source/Destination IP, Protocol, Length, and Info).
-- **Packet Dissector Tree View**: Expand headers across Layer 2 (Ethernet II), Layer 3 (IPv4), Layer 4 (TCP/UDP), and Layer 7 (DNS, HTTP, DHCP).
-- **Raw Hex / ASCII Payload Inspector**: Click any packet byte offset to inspect payload hexadecimal and decoded ASCII.
-- **Wireshark Display Filter Engine**: Filter packets on the fly with syntax like `tcp.analysis.retransmission`, `dns.flags.rcode != 0`, `icmp`, and `bootp`.
-- **RCA Incident Generator**: Click "Export RCA Report" to format observed packet defects into structured bug reports for network engineers.
+A rigorous diagnostic methodology bridging deep Wireshark packet capture analysis with Software Quality Assurance (SQA) defect triage. Diagnoses TCP 3-way handshakes, dropped packet retransmissions, DNS server resolution timeouts, and Microsoft Outlook (IMAP/SMTP) mail sync incidents, structuring technical discoveries into actionable Root Cause Analysis (RCA) incident reports.
 
 ---
 
-## 🛠️ Case Studies & Documented RCAs
+## 🌐 Live Engineering Dossier
+Access the live interactive technical dossier hosted on GitHub Pages:
+👉 **[https://mhmithun.github.io/05-Wireshark-Network-Forensics-RCA/](https://mhmithun.github.io/05-Wireshark-Network-Forensics-RCA/)**
 
-1. **[Case 01: Intermittent DNS Timeout & SERVFAIL Inquiries](docs/RCA_01_DNS_Resolution_Latency.md)**
-   - *Symptom*: End users experiencing 5-second delays opening internal web portals.
-   - *Wireshark Analysis*: `dns.flags.response == 0` without response within 4.8 seconds; root server queried instead of local recursive forwarder.
-   - *Remediation*: Tuned `resolv.conf` timeout and configured BIND9 forward-only zone.
-
-2. **[Case 02: PPPoE MTU Blackhole & TCP SYN/ACK Stall](docs/RCA_02_TCP_Retransmission_Blackhole.md)**
-   - *Symptom*: Broadband customers can ping websites but HTTPS web pages spin indefinitely.
-   - *Wireshark Analysis*: Client sends 1500-byte frame; PPPoE 8-byte overhead causes `ICMP Type 3 Code 4 (Fragmentation Needed and DF set)` dropped by upstream firewalls.
-   - *Remediation*: Configured MikroTik `/ip firewall mangle add chain=forward action=change-mss new-mss=clamp-to-pmtu`.
-
-3. **[Wireshark Display Filter Cheat Sheet](docs/wireshark_display_filters_cheat_sheet.md)**:
-   - High-impact filters for ISP NOC operations.
+Key features in the live dossier:
+1. **SQA RCA Incident Case Studies:** Real failure investigations for TCP retransmissions, DNS resolution timeouts, and link quality drops.
+2. **Wireshark Display Filter Cheat Sheet:** Production filter expressions for packet loss, DNS latency, DHCP DORA handshakes, and TCP resets.
+3. **Microsoft Outlook Diagnostics Runbook:** Standard port matrix (993/995/587), SSL certificate validation, and `.OST` cache rebuild SOPs.
+4. **SQA Defect Lifecycle Standard:** 5-stage incident management process (Intake, Reproduce, Isolate, Resolve, Document).
 
 ---
 
 ## 📁 Repository Structure
 ```
 ├── docs/
-│   ├── RCA_01_DNS_Resolution_Latency.md
-│   ├── RCA_02_TCP_Retransmission_Blackhole.md
-│   └── wireshark_display_filters_cheat_sheet.md
-├── index.html                           # Interactive packet dissector simulator
-├── LICENSE
-└── README.md
+│   ├── RCA_01_High_TCP_Latency_Retransmissions.md
+│   ├── RCA_02_Outlook_IMAP_Sync_Failure.md
+│   └── wireshark_display_filters_guide.md
+├── index.html       # Interactive Multi-Section Engineering Dossier
+├── README.md        # Technical Documentation
+└── LICENSE          # MIT Open Source License
 ```
 
 ---
 
-## 📄 License & Maintainer
-Maintained by **[MD. Mahamudul Hasan](https://github.com/MHMITHUN)**  
-- Email: mhmmithun1@gmail.com | Phone: 01560027539  
-- GitHub: [@MHMITHUN](https://github.com/MHMITHUN) | LinkedIn: [linkedin.com/in/mahamudul0](https://linkedin.com/in/mahamudul0)  
-Released under the [MIT License](LICENSE).
-
+## 👨‍💻 Author
+**MD. Mahamudul Hasan**  
+Software & Network Support Engineer  
+[GitHub Profile](https://github.com/MHMITHUN) · [LinkedIn Profile](https://linkedin.com/in/mahamudul0)
