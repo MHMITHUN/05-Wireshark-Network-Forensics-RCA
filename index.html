@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wireshark Deep Packet Dissector & SQA RCA Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="h-9 w-9 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                    <i class="fa-solid fa-water text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-base font-bold text-white leading-tight">Wireshark Packet Forensics & SQA RCA Console</h1>
+                    <p class="text-xs text-slate-400">Capture File: <span class="font-mono text-cyan-400">asiannet_core_span_01.pcapng</span> (Captured 4,128 Frames)</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3 text-xs">
+                <button onclick="exportRcaModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-3 py-1.5 rounded-lg transition text-xs shadow-md shadow-emerald-600/30 flex items-center space-x-1.5">
+                    <i class="fa-solid fa-file-contract"></i>
+                    <span>Export SQA RCA Report</span>
+                </button>
+                <a href="https://github.com/MHMITHUN/05-Wireshark-Network-Forensics-RCA" target="_blank" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-3 py-1.5 rounded-lg transition text-xs shadow-md shadow-blue-600/30 flex items-center space-x-1.5">
+                    <i class="fa-brands fa-github"></i>
+                    <span>GitHub Repo</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-5 space-y-4">
+        <!-- Display Filter Bar -->
+        <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800 flex flex-wrap items-center gap-2 text-xs">
+            <span class="font-mono text-slate-400 pl-2">Filter:</span>
+            <input id="filter-input" type="text" placeholder="e.g. tcp.analysis.retransmission, dns, icmp, bootp..." class="flex-1 min-w-[200px] bg-slate-950 border border-slate-700 rounded px-3 py-1.5 font-mono text-white focus:outline-none focus:border-cyan-500">
+            <button onclick="applyCustomFilter()" class="bg-slate-800 hover:bg-slate-700 text-cyan-300 px-3 py-1.5 rounded font-mono font-medium transition">Apply</button>
+            <button onclick="setFilter('')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded font-mono font-medium transition">Clear</button>
+            
+            <div class="flex items-center space-x-1 text-[11px] font-mono border-l border-slate-700 pl-2">
+                <span class="text-slate-500">Presets:</span>
+                <button onclick="setFilter('tcp.analysis.retransmission')" class="px-2 py-1 rounded bg-rose-500/20 text-rose-300 hover:bg-rose-500/30">Retransmissions</button>
+                <button onclick="setFilter('dns')" class="px-2 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30">DNS Latency</button>
+                <button onclick="setFilter('icmp')" class="px-2 py-1 rounded bg-purple-500/20 text-purple-300 hover:bg-purple-500/30">MTU Drops</button>
+            </div>
+        </div>
+
+        <!-- 3-Pane Wireshark Dissector View -->
+        <div class="space-y-4">
+            <!-- Pane 1: Packet List -->
+            <div class="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden shadow-xl">
+                <div class="max-h-56 overflow-y-auto">
+                    <table class="w-full text-left text-xs font-mono">
+                        <thead class="bg-slate-950 text-slate-400 sticky top-0 border-b border-slate-800">
+                            <tr>
+                                <th class="py-2 px-3">No.</th>
+                                <th class="py-2 px-3">Time</th>
+                                <th class="py-2 px-3">Source IP</th>
+                                <th class="py-2 px-3">Destination IP</th>
+                                <th class="py-2 px-3">Proto</th>
+                                <th class="py-2 px-3">Len</th>
+                                <th class="py-2 px-3">Packet Info</th>
+                            </tr>
+                        </thead>
+                        <tbody id="packets-tbody" class="divide-y divide-slate-800/80 text-slate-300">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Pane 2 & 3: Packet Details & Hex Dump -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <!-- Packet Dissection Tree -->
+                <div class="bg-slate-900 rounded-xl border border-slate-800 p-4 shadow-xl">
+                    <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-800">
+                        <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-2">
+                            <i class="fa-solid fa-list-check text-cyan-400"></i>
+                            <span>Packet Tree Dissection</span>
+                        </h3>
+                        <span id="selected-packet-badge" class="text-[11px] font-mono text-cyan-400">Frame 1403</span>
+                    </div>
+
+                    <div id="dissect-tree" class="space-y-2 text-xs font-mono text-slate-300 max-h-52 overflow-y-auto">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Raw Hex & ASCII Stream View -->
+                <div class="bg-slate-900 rounded-xl border border-slate-800 p-4 shadow-xl">
+                    <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-800">
+                        <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-2">
+                            <i class="fa-solid fa-code text-emerald-400"></i>
+                            <span>Payload Hex & ASCII Stream</span>
+                        </h3>
+                        <span class="text-[11px] font-mono text-slate-400">Offset: 0x0000 - 0x0040</span>
+                    </div>
+
+                    <pre id="hex-view" class="bg-black/90 p-3 rounded-lg border border-slate-800 text-[11px] font-mono text-emerald-400 leading-relaxed overflow-x-auto max-h-52 overflow-y-auto">
+0000  00 50 56 c0 00 08 00 0c 29 6d 41 b2 08 00 45 00  .PV.....)mA...E.
+0010  00 42 7a 1e 40 00 40 11 9c 4f c0 a8 14 32 c0 a8  .Bz.@.@..O...2..
+0020  1e 0a c3 4f 00 35 00 2e 81 2a 3a 4f 01 00 00 01  ...O.5...*:O....
+0030  00 00 00 00 00 00 03 63 72 6d 08 61 73 69 61 6e  .......crm.asian
+0040  6e 65 74 08 69 6e 74 65 72 6e 61 6c 00 00 01 00  net.internal....
+                    </pre>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- RCA Report Modal -->
+    <div id="rca-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-file-circle-check text-emerald-400"></i>
+                    <h3 class="text-sm font-bold text-white">SQA Defect Root Cause Analysis (RCA) Export</h3>
+                </div>
+                <button onclick="closeRcaModal()" class="text-slate-400 hover:text-white">&times;</button>
+            </div>
+            <div class="bg-black/90 p-4 rounded-xl border border-slate-800 font-mono text-xs text-slate-300 space-y-2 max-h-80 overflow-y-auto">
+                <div class="text-emerald-400 font-bold"># SQA BUG REPORT & RCA: MTU Blackhole Retransmissions</div>
+                <div>Incident: INC-2026-119 | Assignee: Md. Mahamudul Hasan</div>
+                <div>Severity: P1 Critical | Status: RESOLVED</div>
+                <div class="text-slate-400 mt-2">----------------------------------------------------</div>
+                <div>SYMPTOM: PPPoE broadband clients drop large HTTPS payload downloads.</div>
+                <div>WIRESHARK ROOT CAUSE: Frame size 1522 exceeds 1500 MTU due to PPPoE 8-byte header overhead. ICMP Fragmentation Needed blocked.</div>
+                <div>CORRECTIVE ACTION: Clamped TCP MSS to 1440 via RouterOS Mangle rule.</div>
+                <div class="text-emerald-400 mt-2">VERIFICATION: 100/100 HTTP GET requests completed with zero drops.</div>
+            </div>
+            <div class="flex justify-end space-x-3 pt-2">
+                <button onclick="closeRcaModal()" class="bg-slate-800 hover:bg-slate-700 text-white text-xs px-4 py-2 rounded-lg">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
+        <p>Project 05 of Networking Portfolio | Crafted by <strong class="text-slate-300">Md. Mahamudul Hasan</strong> for ISP Software & Network Engineering Roles</p>
+    </footer>
+
+    <script>
+        const packets = [
+            { no: 1401, time: "10.412019", src: "192.168.20.50", dst: "192.168.30.10", proto: "DNS", len: 78, info: "Standard query 0x3a4f A crm.asiannet.internal", category: "dns", anomaly: false },
+            { no: 1402, time: "15.302194", src: "192.168.20.50", dst: "8.8.8.8", proto: "DNS", len: 78, info: "[DNS Timeout Retry 4.89s] Standard query 0x3a4f A crm.asiannet.internal", category: "dns", anomaly: true },
+            { no: 1403, time: "15.321402", src: "8.8.8.8", dst: "192.168.20.50", proto: "DNS", len: 94, info: "Standard query response 0x3a4f No such name A crm.asiannet.internal", category: "dns", anomaly: true },
+            { no: 2011, time: "22.109204", src: "100.64.10.15", dst: "104.21.19.200", proto: "TCP", len: 74, info: "51240 -> 443 [SYN] Seq=0 Win=64240 Len=0 MSS=1460", category: "tcp", anomaly: false },
+            { no: 2012, time: "22.124501", src: "104.21.19.200", dst: "100.64.10.15", proto: "TCP", len: 74, info: "443 -> 51240 [SYN, ACK] Seq=0 Ack=1 Win=65535 Len=0 MSS=1460", category: "tcp", anomaly: false },
+            { no: 2015, time: "23.410290", src: "104.21.19.200", dst: "100.64.10.15", proto: "TCP", len: 1514, info: "[TCP Retransmission] 443 -> 51240 [PSH, ACK] Seq=1 Ack=518 Len=1460", category: "tcp.analysis.retransmission", anomaly: true },
+            { no: 2016, time: "23.410310", src: "100.64.10.1", dst: "104.21.19.200", proto: "ICMP", len: 590, info: "Destination unreachable (Fragmentation needed and DF set, next-hop MTU 1492)", category: "icmp", anomaly: true }
+        ];
+
+        function renderPackets(list) {
+            const tbody = document.getElementById('packets-tbody');
+            tbody.innerHTML = '';
+            list.forEach(pkt => {
+                const tr = document.createElement('tr');
+                tr.className = `cursor-pointer transition ${pkt.anomaly ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-300' : 'hover:bg-slate-800/50'}`;
+                tr.onclick = () => selectPacket(pkt);
+                tr.innerHTML = `
+                    <td class="py-2 px-3 font-bold">${pkt.no}</td>
+                    <td class="py-2 px-3 text-slate-400">${pkt.time}</td>
+                    <td class="py-2 px-3 text-cyan-400">${pkt.src}</td>
+                    <td class="py-2 px-3 text-cyan-400">${pkt.dst}</td>
+                    <td class="py-2 px-3 font-bold ${pkt.proto === 'DNS' ? 'text-amber-400' : pkt.proto === 'ICMP' ? 'text-purple-400' : 'text-blue-400'}">${pkt.proto}</td>
+                    <td class="py-2 px-3 text-slate-400">${pkt.len}</td>
+                    <td class="py-2 px-3 font-mono truncate max-w-xs">${pkt.info}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function selectPacket(pkt) {
+            document.getElementById('selected-packet-badge').textContent = `Frame ${pkt.no} (${pkt.proto})`;
+            const tree = document.getElementById('dissect-tree');
+
+            if (pkt.proto === 'DNS') {
+                tree.innerHTML = `
+                    <div class="border-b border-slate-800 pb-1.5"><strong class="text-white">> Frame ${pkt.no}:</strong> ${pkt.len} bytes on wire (624 bits)</div>
+                    <div class="border-b border-slate-800 pb-1.5"><strong class="text-white">> Ethernet II,</strong> Src: 00:0c:29:6d:41:b2, Dst: 00:50:56:c0:00:08</div>
+                    <div class="border-b border-slate-800 pb-1.5"><strong class="text-white">> Internet Protocol Version 4,</strong> Src: ${pkt.src}, Dst: ${pkt.dst}</div>
+                    <div class="border-b border-slate-800 pb-1.5"><strong class="text-white">> User Datagram Protocol,</strong> Src Port: 53210, Dst Port: 53</div>
+                    <div class="text-amber-300">
+                        <strong class="text-white">> Domain Name System (query):</strong><br>
+                        &nbsp;&nbsp;Transaction ID: 0x3a4f<br>
+                        &nbsp;&nbsp;Queries: crm.asiannet.internal: type A, class IN<br>
+                        &nbsp;&nbsp;<span class="text-rose-400 font-bold">[Severity: Query retry occurred after 4.89s timeout]</span>
+                    </div>
+                `;
+            } else if (pkt.proto === 'ICMP') {
+                tree.innerHTML = `
+                    <div class="border-b border-slate-800 pb-1.5"><strong class="text-white">> Frame ${pkt.no}:</strong> ${pkt.len} bytes on wire</div>
+                    <div class="border-b border-slate-800 pb-1.5"><strong class="text-white">> Internet Protocol Version 4,</strong> Src: ${pkt.src}, Dst: ${pkt.dst}</div>
+                    <div class="text-purple-300">
+                        <strong class="text-white">> Internet Control Message Protocol:</strong><br>
+                        &nbsp;&nbsp;Type: 3 (Destination unreachable)<br>
+                        &nbsp;&nbsp;Code: 4 (Fragmentation needed and DF set)<br>
+                        &nbsp;&nbsp;Next-Hop MTU: 1492<br>
+                        &nbsp;&nbsp;<span class="text-rose-400 font-bold">[RCA Diagnostic: MTU Blackhole detected. Clamp TCP MSS to 1440]</span>
+                    </div>
+                `;
+            } else {
+                tree.innerHTML = `
+                    <div class="border-b border-slate-800 pb-1.5"><strong class="text-white">> Frame ${pkt.no}:</strong> ${pkt.len} bytes on wire</div>
+                    <div class="border-b border-slate-800 pb-1.5"><strong class="text-white">> Internet Protocol Version 4,</strong> Src: ${pkt.src}, Dst: ${pkt.dst}</div>
+                    <div class="text-blue-300">
+                        <strong class="text-white">> Transmission Control Protocol:</strong><br>
+                        &nbsp;&nbsp;Flags: [PSH, ACK]<br>
+                        &nbsp;&nbsp;<span class="text-rose-400 font-bold">[TCP Retransmission: Previous segment not acknowledged]</span>
+                    </div>
+                `;
+            }
+        }
+
+        function setFilter(val) {
+            document.getElementById('filter-input').value = val;
+            applyCustomFilter();
+        }
+
+        function applyCustomFilter() {
+            const val = document.getElementById('filter-input').value.toLowerCase().trim();
+            if (!val) {
+                renderPackets(packets);
+                return;
+            }
+            const filtered = packets.filter(p => p.category.includes(val) || p.proto.toLowerCase().includes(val) || p.info.toLowerCase().includes(val));
+            renderPackets(filtered);
+        }
+
+        function exportRcaModal() {
+            document.getElementById('rca-modal').classList.remove('hidden');
+        }
+
+        function closeRcaModal() {
+            document.getElementById('rca-modal').classList.add('hidden');
+        }
+
+        renderPackets(packets);
+        selectPacket(packets[0]);
+    </script>
+</body>
+</html>
+
